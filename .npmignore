@@ -1,0 +1,13 @@
+src/
+tests/
+.github/
+node_modules/
+coverage/
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+*.tgz
+*.log
+.env*
+.DS_Store
+tsconfig.tsbuildinfo
