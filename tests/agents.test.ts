@@ -5,14 +5,19 @@ import {
   AgentRuntimeSchema,
   AgentSchema,
   AgentStatusSchema,
+  DeployBundleSchema,
+  DeployModeSchema,
   GatewayTypeSchema,
   GatewayUpsertInputSchema,
+  HeartbeatRequestSchema,
+  HeartbeatResponseSchema,
   HibernationStateSchema,
   HibernationStatusSchema,
   LaunchAgentRequestSchema,
   LaunchAgentResponseSchema,
   LiveEcsStatusSchema,
   RuntimeImageSchema,
+  RuntimeKindSchema,
   RuntimesListResponseSchema,
 } from "../src/index.js";
 
@@ -242,5 +247,158 @@ describe("LaunchAgentRequestSchema + LaunchAgentResponseSchema", () => {
       },
     });
     expect(out.credentials?.relayApiKey).toBe("rk_abc");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 0.2.0 — BYO deploy modes
+// ---------------------------------------------------------------------------
+
+describe("DeployModeSchema", () => {
+  it("accepts the canonical 0.2 values", () => {
+    for (const m of ["perkos-managed", "self-hosted", "imported"] as const) {
+      expect(DeployModeSchema.parse(m)).toBe(m);
+    }
+  });
+  it("accepts the legacy aliases for back-compat", () => {
+    expect(DeployModeSchema.parse("vps")).toBe("vps");
+    expect(DeployModeSchema.parse("local")).toBe("local");
+  });
+  it("rejects unknown deploy modes", () => {
+    expect(() => DeployModeSchema.parse("kubernetes")).toThrow();
+  });
+});
+
+describe("RuntimeKindSchema", () => {
+  it("accepts hermes / openclaw / custom", () => {
+    for (const k of ["hermes", "openclaw", "custom"] as const) {
+      expect(RuntimeKindSchema.parse(k)).toBe(k);
+    }
+  });
+  it("rejects unknown kinds", () => {
+    expect(() => RuntimeKindSchema.parse("Hermes")).toThrow();
+  });
+});
+
+describe("AgentSchema 0.2 additions", () => {
+  it("accepts a self-hosted agent with bridge state", () => {
+    const a = AgentSchema.parse({
+      id: "a1",
+      name: "Bob",
+      runtime: "Hermes",
+      status: "ready",
+      walletAddress: "0x" + "b".repeat(40),
+      plugins: [],
+      deployMode: "self-hosted",
+      bridgeConnected: true,
+      lastBridgeSeenAt: new Date().toISOString(),
+      runtimeVersion: "0.12.1",
+    });
+    expect(a.deployMode).toBe("self-hosted");
+    expect(a.bridgeConnected).toBe(true);
+  });
+  it("accepts an imported agent with runtimeKind", () => {
+    const a = AgentSchema.parse({
+      id: "a2",
+      name: "Carol",
+      runtime: "Hermes",
+      status: "ready",
+      walletAddress: "0x" + "c".repeat(40),
+      plugins: [],
+      deployMode: "imported",
+      runtimeKind: "hermes",
+    });
+    expect(a.runtimeKind).toBe("hermes");
+  });
+});
+
+describe("LaunchAgentRequestSchema 0.2 additions", () => {
+  it("parses a self-hosted launch request", () => {
+    const r = LaunchAgentRequestSchema.parse({
+      walletAddress: "0x" + "a".repeat(40),
+      runtime: "Hermes",
+      name: "TestAgent",
+      deployMode: "self-hosted",
+    });
+    expect(r.deployMode).toBe("self-hosted");
+  });
+  it("parses an imported launch request with custom HERMES_API_URL", () => {
+    const r = LaunchAgentRequestSchema.parse({
+      walletAddress: "0x" + "a".repeat(40),
+      runtime: "Hermes",
+      name: "TestAgent",
+      deployMode: "imported",
+      runtimeKind: "hermes",
+      hermesApiUrl: "http://localhost:9090",
+    });
+    expect(r.hermesApiUrl).toBe("http://localhost:9090");
+  });
+});
+
+describe("DeployBundleSchema", () => {
+  it("parses a minimal bundle", () => {
+    const b = DeployBundleSchema.parse({
+      composeYaml: "services:\n  bridge: {}\n",
+      envFile: "A2A_AGENT_NAME=Test\n",
+      instructions: "# Run\n\n```docker compose up -d\n```\n",
+    });
+    expect(b.composeYaml).toContain("bridge");
+  });
+  it("accepts the optional dockerRunCommand", () => {
+    const b = DeployBundleSchema.parse({
+      composeYaml: "x",
+      envFile: "y",
+      instructions: "z",
+      dockerRunCommand: "docker run --rm perkos/a2a",
+    });
+    expect(b.dockerRunCommand).toContain("docker run");
+  });
+});
+
+describe("LaunchAgentResponseSchema with deployBundle", () => {
+  it("parses a self-hosted response carrying a bundle", () => {
+    const out = LaunchAgentResponseSchema.parse({
+      ok: true,
+      launchId: "abc",
+      credentials: {
+        agentName: "MyAgent",
+        relayApiKey: "rk_abc",
+        chatUrl: "wss://chat.perkos.xyz/chat",
+        transportUrl: "wss://transport.perkos.xyz/a2a",
+      },
+      deployBundle: {
+        composeYaml: "services:\n  bridge: {}\n",
+        envFile: "FOO=BAR\n",
+        instructions: "Run it.",
+      },
+      result: {
+        mode: "self-hosted",
+        status: "ready",
+      },
+    });
+    expect(out.deployBundle?.envFile).toContain("FOO=BAR");
+  });
+});
+
+describe("HeartbeatRequestSchema + HeartbeatResponseSchema", () => {
+  it("parses a valid heartbeat payload", () => {
+    const h = HeartbeatRequestSchema.parse({
+      runtimeKind: "hermes",
+      version: "0.12.1",
+      ts: Date.now(),
+    });
+    expect(h.runtimeKind).toBe("hermes");
+  });
+  it("rejects a non-integer ts", () => {
+    expect(() =>
+      HeartbeatRequestSchema.parse({
+        runtimeKind: "hermes",
+        version: "0.12.1",
+        ts: 1.5,
+      }),
+    ).toThrow();
+  });
+  it("parses the response shape", () => {
+    expect(HeartbeatResponseSchema.parse({ ok: true }).ok).toBe(true);
   });
 });
