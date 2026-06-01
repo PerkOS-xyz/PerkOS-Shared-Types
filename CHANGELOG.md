@@ -4,6 +4,37 @@ Semver: minor bumps for additive type/schema changes (new schema, new optional
 field), patch for fixes that don't change the wire shape, major for any
 breaking change to existing types or schemas.
 
+## 0.3.0 — 2026-06-01
+
+Additive: release channels + visible upstream version for curated runtime
+images. Powers weekly, reproducible, behavior-tested releases of the
+OpenClaw/Hermes images, with a beta channel gated to a testers group and the
+upstream version surfaced everywhere so everyone knows what's running.
+
+### Added
+
+- **`RuntimeChannelSchema`** — `public | beta | hidden`. Single-state release
+  lifecycle that supersedes the old `active: boolean`. A legacy doc carrying
+  only `active` maps to `public` (true) / `hidden` (false).
+- **`RuntimeUpstreamSchema`** — `{ source, version|null, digest, resolvedAt }`.
+  The upstream image the build was pinned to (by digest), so releases are
+  reproducible and the running version is visible.
+- **`RuntimeBuildStatusSchema`** — CI smoke-build outcome (`ok | fail`).
+- **`RuntimeBehaviorCheckSchema` / `RuntimeBehaviorTestSchema`** — result of
+  the post-build behavior test (`pass | fail | pending` + per-check detail).
+  Gates promotion to the `public` channel.
+- **`RuntimeImage`** (the public /runtimes wire shape) gains `channel`
+  (default `public`) and `upstreamVersion` (nullable). Both additive.
+- **`AdminRuntimeImageSchema`** — full curator view returned by
+  GET /admin/runtimes: ECR scan merged with channel + upstream + build +
+  behaviorTest + a2aVersion overlay.
+
+### Changed
+
+- Nothing removed. `active` is no longer part of the public `RuntimeImage`
+  shape, but the server keeps writing it (in sync with `channel`) for
+  back-compat with not-yet-migrated readers.
+
 ## 0.2.0 — 2026-05-29
 
 Additive: BYO (bring-your-own infra) deploy modes for agent provisioning.

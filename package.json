@@ -1,6 +1,6 @@
 {
   "name": "@perkos/shared-types",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared TypeScript types + Zod schemas for the PerkOS platform.",
   "type": "module",
   "main": "./dist/index.cjs",

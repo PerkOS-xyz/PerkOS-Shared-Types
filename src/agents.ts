@@ -115,6 +115,9 @@ export const AgentSchema = z.object({
   lastBridgeSeenAt: z.string().optional(),
   /** perkos-a2a npm version the bridge advertised. New in 0.2.0. */
   runtimeVersion: z.string().optional(),
+  /** Human-readable upstream OpenClaw/Hermes version baked into the image
+   *  this agent runs (mirror of ecs.upstreamVersion). New in 0.3.0. */
+  upstreamVersion: z.string().nullable().optional(),
 });
 export type Agent = z.infer<typeof AgentSchema>;
 
@@ -168,9 +171,69 @@ export type LiveEcsStatus = z.infer<typeof LiveEcsStatusSchema>;
 // ---------------------------------------------------------------------------
 
 /**
+ * Release channel for a curated runtime image. Single-state lifecycle:
+ *   - "hidden"  — not visible/provisionable by anyone.
+ *   - "beta"    — visible + provisionable only by the testers group
+ *                 (/beta_testers) and super-admins.
+ *   - "public"  — visible + provisionable by everyone who passes access.
+ * Replaces the old `active: boolean`. Back-compat: a legacy doc with only
+ * `active` maps to "public" (true) / "hidden" (false). New in 0.3.0.
+ */
+export const RuntimeChannelSchema = z.enum(["public", "beta", "hidden"]);
+export type RuntimeChannel = z.infer<typeof RuntimeChannelSchema>;
+
+/**
+ * Which upstream the image wraps, pinned by digest so the build is
+ * reproducible and everyone can see exactly what version is running.
+ * New in 0.3.0.
+ */
+export const RuntimeUpstreamSchema = z.object({
+  /** e.g. "ghcr.io/openclaw/openclaw" or "nousresearch/hermes-agent". */
+  source: z.string().min(1),
+  /** OCI label `org.opencontainers.image.version`, or null if absent. */
+  version: z.string().nullable(),
+  /** Resolved upstream digest the image was built FROM (sha256:...). */
+  digest: z.string().min(1),
+  /** ISO 8601 timestamp the digest was resolved in CI. */
+  resolvedAt: z.string().nullable(),
+});
+export type RuntimeUpstream = z.infer<typeof RuntimeUpstreamSchema>;
+
+/** CI smoke-build outcome recorded by the ingest endpoint. New in 0.3.0. */
+export const RuntimeBuildStatusSchema = z.object({
+  status: z.enum(["ok", "fail"]),
+  /** GitHub Actions run id/url for traceability. */
+  runId: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+});
+export type RuntimeBuildStatus = z.infer<typeof RuntimeBuildStatusSchema>;
+
+/** One assertion in the behavior test (e.g. "hermes-non-empty-reply"). */
+export const RuntimeBehaviorCheckSchema = z.object({
+  name: z.string().min(1),
+  ok: z.boolean(),
+  detail: z.string().nullable(),
+});
+export type RuntimeBehaviorCheck = z.infer<typeof RuntimeBehaviorCheckSchema>;
+
+/**
+ * Result of the post-build behavior test (provisions an ephemeral agent
+ * and asserts it answers substantively). Gates promotion to "public".
+ * New in 0.3.0.
+ */
+export const RuntimeBehaviorTestSchema = z.object({
+  status: z.enum(["pass", "fail", "pending"]),
+  runAt: z.string().nullable(),
+  reportUrl: z.string().nullable(),
+  checks: z.array(RuntimeBehaviorCheckSchema),
+});
+export type RuntimeBehaviorTest = z.infer<typeof RuntimeBehaviorTestSchema>;
+
+/**
  * One row in the user-facing /api/runtimes response. Admin code that
- * mutates `/runtime_images/{id}` carries extra fields (`active`, write
- * audit), but those don't leak to clients.
+ * mutates `/runtime_images/{id}` carries extra fields (channel internals,
+ * write audit), but those don't leak to clients beyond `channel` and the
+ * human-readable upstream version.
  */
 export const RuntimeImageSchema = z.object({
   runtime: AgentRuntimeSchema,
@@ -180,8 +243,38 @@ export const RuntimeImageSchema = z.object({
   displayName: z.string().nullable(),
   /** Optional notes shown next to the runtime card in the wizard. */
   notes: z.string().nullable(),
+  /** Release channel. Drives the BETA badge in the wizard. New in 0.3.0. */
+  channel: RuntimeChannelSchema.default("public"),
+  /**
+   * Human-readable upstream version shown in the wizard ("v0.9.2" or, when
+   * the upstream ships no semver label, a short digest like "a1b2c3").
+   * New in 0.3.0.
+   */
+  upstreamVersion: z.string().nullable().default(null),
 });
 export type RuntimeImage = z.infer<typeof RuntimeImageSchema>;
+
+/**
+ * Full admin/curator view of a runtime image — ECR scan merged with the
+ * Firestore overlay. Returned by GET /admin/runtimes. New in 0.3.0.
+ */
+export const AdminRuntimeImageSchema = z.object({
+  runtime: AgentRuntimeSchema,
+  repoName: z.string(),
+  imageDigest: z.string(),
+  tags: z.array(z.string()),
+  pushedAt: z.string().nullable(),
+  sizeBytes: z.number().nullable(),
+  primaryTag: z.string(),
+  channel: RuntimeChannelSchema,
+  displayName: z.string().nullable(),
+  notes: z.string().nullable(),
+  upstream: RuntimeUpstreamSchema.nullable(),
+  a2aVersion: z.string().nullable(),
+  build: RuntimeBuildStatusSchema.nullable(),
+  behaviorTest: RuntimeBehaviorTestSchema.nullable(),
+});
+export type AdminRuntimeImage = z.infer<typeof AdminRuntimeImageSchema>;
 
 /** GET /api/runtimes response. */
 export const RuntimesListResponseSchema = z.object({
