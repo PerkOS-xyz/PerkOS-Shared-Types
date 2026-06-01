@@ -294,6 +294,18 @@ export const LaunchAgentRequestSchema = z.object({
    * (we always emit the compose-network DNS name).
    */
   hermesApiUrl: z.string().optional(),
+  /**
+   * Rendered persona markdown (SOUL.md for Hermes / AGENTS.md for
+   * OpenClaw). Capped well under the ECS 8 KB-per-var ceiling (base64
+   * inflation ~33%). Optional — absent → default persona.
+   */
+  soul: z.string().max(12000).optional(),
+  /**
+   * Selected skill pack ids from the wizard's skills step. The server
+   * resolves these to raw SKILL.md URLs (re-validating the host
+   * allow-list) — clients never send raw URLs.
+   */
+  skills: z.array(z.string()).max(40).optional(),
 });
 export type LaunchAgentRequest = z.infer<typeof LaunchAgentRequestSchema>;
 
