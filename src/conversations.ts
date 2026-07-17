@@ -25,15 +25,25 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 /**
- * `user:0xabc…` or `agent:SomeAgentName`. Templated literal type encodes
+ * `user:0xabc…`, `agent:SomeAgentName`, or `service:perkos-api`.
+ * Templated literal type encodes
  * the prefix invariant in TypeScript; the Zod refine() mirrors it at runtime.
  */
 export const ConversationIdentitySchema = z
   .string()
-  .refine((s) => s.startsWith("user:") || s.startsWith("agent:"), {
-    message: "identity must start with 'user:' or 'agent:'",
-  });
-export type ConversationIdentity = `user:${string}` | `agent:${string}`;
+  .refine(
+    (s) =>
+      s.startsWith("user:") ||
+      s.startsWith("agent:") ||
+      s.startsWith("service:"),
+    {
+      message: "identity must start with 'user:', 'agent:', or 'service:'",
+    },
+  );
+export type ConversationIdentity =
+  | `user:${string}`
+  | `agent:${string}`
+  | `service:${string}`;
 
 /** Legacy alias used by PerkOS-A2A. */
 export type ChatIdentity = ConversationIdentity;
@@ -86,6 +96,8 @@ export const MessageSchema = z.object({
   /** ISO 8601 timestamp. */
   timestamp: z.string(),
   replyTo: z.string().nullable().optional(),
+  /** Optional workflow/domain event rendered as a rich chat card. */
+  event: z.record(z.unknown()).optional(),
 });
 export type Message = z.infer<typeof MessageSchema>;
 
