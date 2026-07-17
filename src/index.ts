@@ -32,5 +32,8 @@ export * from "./jobs.js";
 // Conversations + assistant chat.
 export * from "./conversations.js";
 
+// Project planning, approval, execution, and completion workflow.
+export * from "./project-workflow.js";
+
 // Cross-cutting API envelopes.
 export * from "./api.js";
