@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AgentGatewayRecordSchema,
+  RuntimeChannelCapabilitySchema,
   AgentRuntimeSchema,
   AgentSchema,
   AgentStatusSchema,
@@ -145,6 +146,34 @@ describe("GatewayTypeSchema + AgentGatewayRecordSchema", () => {
         updatedAt: "y",
       }),
     ).toThrow();
+  });
+});
+
+describe("RuntimeChannelCapabilitySchema", () => {
+  it("models a framework-specific Telegram transport", () => {
+    const out = RuntimeChannelCapabilitySchema.parse({
+      adapterId: "hermes.telegram.polling.v1",
+      framework: "Hermes",
+      provider: "telegram",
+      label: "Telegram · Hermes polling",
+      transportMode: "polling",
+      managementMode: "runtime-native",
+      loginMode: "token",
+      requiresAlwaysOn: true,
+      requiresPersistentStorage: false,
+      supportsManagedRelay: false,
+      fields: [
+        {
+          key: "botToken",
+          label: "Bot token",
+          required: true,
+          secret: true,
+          input: "password",
+        },
+      ],
+    });
+    expect(out.framework).toBe("Hermes");
+    expect(out.transportMode).toBe("polling");
   });
 });
 

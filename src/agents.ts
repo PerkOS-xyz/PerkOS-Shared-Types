@@ -289,6 +289,65 @@ export type RuntimesListResponse = z.infer<typeof RuntimesListResponseSchema>;
 export const GatewayTypeSchema = z.enum(["telegram", "farcaster", "slack"]);
 export type GatewayType = z.infer<typeof GatewayTypeSchema>;
 
+/** How a framework receives events from a provider. */
+export const ChannelTransportModeSchema = z.enum([
+  "polling",
+  "webhook",
+  "socket",
+  "http",
+  "relay",
+]);
+export type ChannelTransportMode = z.infer<typeof ChannelTransportModeSchema>;
+
+/** Who owns the connector process and its credentials. */
+export const ChannelManagementModeSchema = z.enum([
+  "runtime-native",
+  "perkos-managed-relay",
+  "user-managed-native",
+]);
+export type ChannelManagementMode = z.infer<typeof ChannelManagementModeSchema>;
+
+export const ChannelLoginModeSchema = z.enum([
+  "token",
+  "oauth",
+  "qr",
+  "embedded-signup",
+]);
+export type ChannelLoginMode = z.infer<typeof ChannelLoginModeSchema>;
+
+export const RuntimeChannelFieldSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  required: z.boolean(),
+  secret: z.boolean(),
+  input: z.enum(["text", "password", "url", "select", "boolean"]),
+  options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+  help: z.string().optional(),
+});
+export type RuntimeChannelField = z.infer<typeof RuntimeChannelFieldSchema>;
+
+/**
+ * Versionable capability advertised by the PerkOS control plane for one
+ * framework/provider/transport combination. The UI renders this schema rather
+ * than assuming Hermes and OpenClaw accept the same configuration.
+ */
+export const RuntimeChannelCapabilitySchema = z.object({
+  adapterId: z.string().min(1),
+  framework: AgentRuntimeSchema,
+  provider: GatewayTypeSchema,
+  label: z.string().min(1),
+  transportMode: ChannelTransportModeSchema,
+  managementMode: ChannelManagementModeSchema,
+  loginMode: ChannelLoginModeSchema,
+  requiresAlwaysOn: z.boolean(),
+  requiresPersistentStorage: z.boolean(),
+  supportsManagedRelay: z.boolean(),
+  fields: z.array(RuntimeChannelFieldSchema),
+});
+export type RuntimeChannelCapability = z.infer<
+  typeof RuntimeChannelCapabilitySchema
+>;
+
 export const AgentGatewayStatusSchema = z.enum(["pending", "active", "error"]);
 export type AgentGatewayStatus = z.infer<typeof AgentGatewayStatusSchema>;
 
@@ -301,6 +360,11 @@ export type AgentGatewayStatus = z.infer<typeof AgentGatewayStatusSchema>;
  */
 export const AgentGatewayRecordSchema = z.object({
   type: GatewayTypeSchema,
+  adapterId: z.string().optional(),
+  framework: AgentRuntimeSchema.optional(),
+  transportMode: ChannelTransportModeSchema.optional(),
+  managementMode: ChannelManagementModeSchema.optional(),
+  requiresAlwaysOn: z.boolean().optional(),
   enabled: z.boolean(),
   nonSecretConfig: z.record(z.string(), z.string()),
   secretsProvided: z.array(z.string()),
@@ -308,6 +372,7 @@ export const AgentGatewayRecordSchema = z.object({
   secretArns: z.record(z.string(), z.string()).optional(),
   status: AgentGatewayStatusSchema,
   statusMessage: z.string().optional(),
+  lastProbeAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -326,6 +391,9 @@ export type AgentGateways = z.infer<typeof AgentGatewaysSchema>;
  */
 export const GatewayUpsertInputSchema = z.object({
   type: GatewayTypeSchema,
+  adapterId: z.string().optional(),
+  transportMode: ChannelTransportModeSchema.optional(),
+  managementMode: ChannelManagementModeSchema.optional(),
   enabled: z.boolean(),
   nonSecretConfig: z.record(z.string(), z.string()).optional(),
   secrets: z.record(z.string(), z.string()).optional(),
