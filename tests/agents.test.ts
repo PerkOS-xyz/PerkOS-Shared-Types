@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AgentGatewayRecordSchema,
+  AgentProfileUpdateSchema,
   RuntimeChannelCapabilitySchema,
   AgentRuntimeSchema,
   AgentSchema,
@@ -74,6 +75,24 @@ describe("AgentSchema", () => {
         walletAddress: "0x" + "a".repeat(40),
       }),
     ).toThrow();
+  });
+});
+
+describe("AgentProfileUpdateSchema", () => {
+  it("accepts owner-editable profile fields without operational identity", () => {
+    expect(AgentProfileUpdateSchema.parse({
+      displayName: "Research lead",
+      soul: "Use primary sources.",
+      plugins: ["web-search"],
+      skillIds: ["research"],
+      disabledTools: ["code-execution"],
+    })).toMatchObject({ displayName: "Research lead" });
+  });
+
+  it("rejects empty patches, unknown fields, and runtime identity changes", () => {
+    expect(() => AgentProfileUpdateSchema.parse({})).toThrow();
+    expect(() => AgentProfileUpdateSchema.parse({ name: "new-relay-name" })).toThrow();
+    expect(() => AgentProfileUpdateSchema.parse({ relayApiKey: "secret" })).toThrow();
   });
 });
 
