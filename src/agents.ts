@@ -93,10 +93,17 @@ export type RuntimeKind = z.infer<typeof RuntimeKindSchema>;
 export const AgentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  /** User-facing label. The relay/runtime identity remains `name`. */
+  displayName: z.string().min(1).max(64).optional(),
   runtime: AgentRuntimeSchema,
   status: AgentStatusSchema,
   walletAddress: z.string(),
   plugins: z.array(z.string()).default([]),
+  /** User-selected catalog ids. Runtime files are resolved server-side. */
+  skillIds: z.array(z.string()).max(40).optional(),
+  /** Rendered SOUL.md / AGENTS.md. Owner-only projections may return it. */
+  soul: z.string().max(12000).optional(),
+  disabledTools: z.array(z.string()).max(40).optional(),
   taskArn: z.string().optional(),
   endpoint: z.string().optional(),
   /** ISO 8601 timestamp string. */
@@ -120,6 +127,24 @@ export const AgentSchema = z.object({
   upstreamVersion: z.string().nullable().optional(),
 });
 export type Agent = z.infer<typeof AgentSchema>;
+
+/**
+ * Owner-authorized mutable agent profile. Operational identity (`name`),
+ * runtime, hosting and credentials are intentionally excluded.
+ */
+export const AgentProfileUpdateSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(64).optional(),
+    soul: z.string().max(12000).optional(),
+    plugins: z.array(z.string().trim().min(1).max(64)).max(40).optional(),
+    skillIds: z.array(z.string().trim().min(1).max(128)).max(40).optional(),
+    disabledTools: z.array(z.string().trim().min(1).max(64)).max(40).optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one profile field is required.",
+  });
+export type AgentProfileUpdate = z.infer<typeof AgentProfileUpdateSchema>;
 
 // ---------------------------------------------------------------------------
 // Hibernation
