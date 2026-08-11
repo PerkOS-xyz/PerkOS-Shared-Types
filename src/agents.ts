@@ -545,6 +545,13 @@ export const HeartbeatRequestSchema = z.object({
   runtimeKind: RuntimeKindSchema,
   version: z.string().min(1),
   ts: z.number().int().nonnegative(),
+  /**
+   * Execution-runtime readiness as observed by the bridge/plugin. Transport
+   * connectivity alone does not prove that the external runtime can receive
+   * and answer work. Optional for backwards wire compatibility; consumers
+   * must treat an omitted value as `unknown`, never as healthy.
+   */
+  runtimeStatus: z.enum(["healthy", "unreachable", "unknown"]).optional(),
 });
 export type HeartbeatRequest = z.infer<typeof HeartbeatRequestSchema>;
 

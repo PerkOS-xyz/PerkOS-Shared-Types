@@ -434,8 +434,10 @@ describe("HeartbeatRequestSchema + HeartbeatResponseSchema", () => {
       runtimeKind: "hermes",
       version: "0.12.1",
       ts: Date.now(),
+      runtimeStatus: "healthy",
     });
     expect(h.runtimeKind).toBe("hermes");
+    expect(h.runtimeStatus).toBe("healthy");
   });
   it("rejects a non-integer ts", () => {
     expect(() =>
@@ -448,5 +450,18 @@ describe("HeartbeatRequestSchema + HeartbeatResponseSchema", () => {
   });
   it("parses the response shape", () => {
     expect(HeartbeatResponseSchema.parse({ ok: true }).ok).toBe(true);
+  });
+  it("keeps legacy heartbeats compatible but rejects invented runtime states", () => {
+    expect(HeartbeatRequestSchema.parse({
+      runtimeKind: "openclaw",
+      version: "0.12.48",
+      ts: 1,
+    }).runtimeStatus).toBeUndefined();
+    expect(() => HeartbeatRequestSchema.parse({
+      runtimeKind: "custom",
+      version: "1.0.0",
+      ts: 1,
+      runtimeStatus: "connected",
+    })).toThrow();
   });
 });

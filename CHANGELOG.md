@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+- Add optional `runtimeStatus` evidence to external-agent heartbeats. An
+  omitted value is explicitly legacy/unknown rather than proof that the
+  execution runtime is healthy.
+
 Semver: minor bumps for additive type/schema changes (new schema, new optional
 field), patch for fixes that don't change the wire shape, major for any
 breaking change to existing types or schemas.
