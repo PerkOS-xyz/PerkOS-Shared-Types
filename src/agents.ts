@@ -30,8 +30,18 @@ import { AddressSchema } from "./auth.js";
 /**
  * Agent runtime kind. User-facing capitalization preserved (it's what the
  * wizard and the Firestore agent docs already store).
+ *
+ * ZeroClaw (added 2026-08-17) is the third runtime: the Rust ZeroClaw gateway,
+ * wrapped in PerkOS-Containers `images/zeroclaw`. Adding it here is what lets
+ * a built image be registered on the beta channel at all — the runtime-image
+ * ingest rejects anything outside this enum.
+ *
+ * Consumers that branch on this value must not assume it is a two-way choice:
+ * a `runtime === "OpenClaw" ? a : b` ternary silently treats ZeroClaw as
+ * Hermes. ZeroClaw differs from both — it delivers over
+ * `POST /webhook {"message": ...}` on port 42617, not an OpenAI-shaped route.
  */
-export const AgentRuntimeSchema = z.enum(["OpenClaw", "Hermes"]);
+export const AgentRuntimeSchema = z.enum(["OpenClaw", "Hermes", "ZeroClaw"]);
 export type AgentRuntime = z.infer<typeof AgentRuntimeSchema>;
 
 // ---------------------------------------------------------------------------
