@@ -8,7 +8,18 @@
  *   2. "env-allowlist"        → wallet seeded in the env `PERKOS_WHITELIST`.
  *   3. "firestore-allowlist"  → wallet in `/allowlist/{address}`.
  *   4. "super-admin"          → wallet in `/super_admins/{address}` or env.
- *   5. "not-allowlisted"      → none of the above.
+ *   5. "funded"               → not allowlisted, but the wallet carries a
+ *                               prepaid balance that covers at least one
+ *                               billable call. This is how a third-party
+ *                               agent onboards itself: nobody vouches for it,
+ *                               it pays. A balance below the minimum charge
+ *                               does NOT qualify — letting it in would admit
+ *                               a caller that fails on its first job.
+ *   6. "not-allowlisted"      → none of the above.
+ *
+ * "funded" authorises a caller to exist and consume. It does NOT grant access
+ * to anyone else's organization: membership is what does that. Collapsing the
+ * two would let anyone with USDC into anyone's projects.
  *
  * The booleans `ecs`, `llm`, `public` describe the *capabilities* unlocked
  * by the decision, separating "can sign in" from "can pick PerkOS LLM" and
@@ -25,6 +36,7 @@ export const AccessReasonSchema = z.enum([
   "env-allowlist",
   "firestore-allowlist",
   "super-admin",
+  "funded",
   "not-allowlisted",
 ]);
 export type AccessReason = z.infer<typeof AccessReasonSchema>;
