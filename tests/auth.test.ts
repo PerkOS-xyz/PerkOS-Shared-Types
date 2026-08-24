@@ -127,8 +127,24 @@ describe("AccessDecisionSchema + AccessReasonSchema", () => {
       "env-allowlist",
       "firestore-allowlist",
       "super-admin",
+      // A third party nobody vouched for, authorised because it pays.
+      "funded",
       "not-allowlisted",
     ]);
+  });
+
+  it("accepts funded as an allowed decision", () => {
+    const decision = AccessDecisionSchema.parse({
+      allowed: true,
+      reason: "funded",
+      ecs: false,
+      llm: false,
+      public: false,
+    });
+    expect(decision.reason).toBe("funded");
+    // Funded buys compute, not somebody else's organization. The capability
+    // flags stay independent of how the caller got through the door.
+    expect(decision.ecs).toBe(false);
   });
 });
 
