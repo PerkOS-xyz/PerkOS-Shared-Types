@@ -69,8 +69,8 @@ export const WalletSigninRequestSchema = z.union([
     chain: z.literal("solana"),
     address: WalletAddressSchema.refine((value) => walletChain(value) === "solana"),
     nonce: z.string().regex(/^[a-f0-9]{32}$/),
-    // Dynamic's Solana connector returns a base58-encoded Ed25519 signature.
-    signature: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,88}$/),
+    // Dynamic 4.91.6 returns a base64-encoded 64-byte Ed25519 signature.
+    signature: z.string().regex(/^[A-Za-z0-9+/]{86}==$/),
     chainId: z.never().optional(),
   }),
 ]);

@@ -19,7 +19,7 @@ describe("chain-aware wallet identity", () => {
     }
   });
   it("requires explicit Solana chain and bounds the nonce", () => {
-    const request = { address: solana, nonce: "a".repeat(32), signature: "1".repeat(64) };
+    const request = { address: solana, nonce: "a".repeat(32), signature: Buffer.alloc(64).toString("base64") };
     expect(WalletSigninRequestSchema.safeParse(request).success).toBe(false);
     expect(WalletSigninRequestSchema.safeParse({ ...request, chain: "solana" }).success).toBe(true);
     expect(WalletSigninRequestSchema.safeParse({ ...request, chain: "solana", nonce: "../x" }).success).toBe(false);
