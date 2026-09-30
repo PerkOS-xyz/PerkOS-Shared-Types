@@ -14,6 +14,7 @@
 import { z } from "zod";
 
 import { AccessDecisionSchema } from "./access.js";
+import { walletChain, normalizeWalletAddress } from "./walletIdentity.js";
 
 /**
  * Lower- or mixed-case 0x-prefixed 40-hex EVM address.
@@ -25,6 +26,9 @@ export const AddressSchema = z
   .string()
   .regex(/^0x[a-fA-F0-9]{40}$/, "invalid wallet address");
 export type Address = `0x${string}`;
+
+/** Login/workspace identity only. Keep AddressSchema EVM-only for EVM transactions. */
+export const WalletAddressSchema = z.string().refine((value) => walletChain(value) !== null, "invalid wallet address");
 
 /**
  * Returned by GET /api/auth/nonce. The nonce is stashed server-side under
@@ -50,7 +54,8 @@ export type NonceResponse = z.infer<typeof NonceResponseSchema>;
 /**
  * POST /api/auth/wallet-signin body.
  */
-export const WalletSigninRequestSchema = z.object({
+export const EvmWalletSigninRequestSchema = z.object({
+  chain: z.literal("evm").optional(),
   address: AddressSchema,
   nonce: z.string().min(1),
   /** 0x-prefixed lowercase hex. EOAs ~132 chars, ERC-1271 smart wallet payloads can be longer. */
@@ -58,6 +63,17 @@ export const WalletSigninRequestSchema = z.object({
   /** Optional. When omitted, the server tries Base mainnet then Base Sepolia. */
   chainId: z.number().int().positive().optional(),
 });
+export const WalletSigninRequestSchema = z.union([
+  EvmWalletSigninRequestSchema,
+  z.object({
+    chain: z.literal("solana"),
+    address: WalletAddressSchema.refine((value) => walletChain(value) === "solana"),
+    nonce: z.string().regex(/^[a-f0-9]{32}$/),
+    // Dynamic 4.91.6 returns a base64-encoded 64-byte Ed25519 signature.
+    signature: z.string().regex(/^[A-Za-z0-9+/]{86}==$/),
+    chainId: z.never().optional(),
+  }),
+]);
 export type WalletSigninRequest = z.infer<typeof WalletSigninRequestSchema>;
 
 /**
@@ -80,7 +96,7 @@ export type Role = z.infer<typeof RoleSchema>;
 export const WalletSigninResponseSchema = z.object({
   token: z.string().min(1),
   /** Lowercased wallet address — the Firebase uid. */
-  uid: z.string().regex(/^0x[a-f0-9]{40}$/),
+  uid: WalletAddressSchema.refine((value) => normalizeWalletAddress(value) === value, "non-canonical wallet uid"),
   role: RoleSchema,
   access: AccessDecisionSchema,
 });

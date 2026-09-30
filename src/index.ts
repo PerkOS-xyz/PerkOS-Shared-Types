@@ -19,6 +19,7 @@ export * from "./access.js";
 
 // Wallet sign-in.
 export * from "./auth.js";
+export * from "./walletIdentity.js";
 
 // Agents, runtime images, gateways, launch.
 export * from "./agents.js";
