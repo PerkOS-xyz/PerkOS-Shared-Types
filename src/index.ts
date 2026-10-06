@@ -36,5 +36,8 @@ export * from "./conversations.js";
 // Project planning, approval, execution, and completion workflow.
 export * from "./project-workflow.js";
 
+// Durable execution traces used by API, runtimes, tools, and clients.
+export * from "./execution-events.js";
+
 // Cross-cutting API envelopes.
 export * from "./api.js";
